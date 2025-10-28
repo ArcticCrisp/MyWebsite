@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arctic Crisp - Femboy Aura</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        /* Aesthetic: Pastel Light Background, Soft Accents */
+        :root {
+            --bg-light: #F7F4F9; /* Very light lavender/white */
+            --text-dark: #333333; /* Soft dark text */
+            --pastel-pink: #FFC0CB; /* Light Pink */
+            --pastel-blue: #ADD8E6; /* Light Blue */
+            --pastel-purple: #E6E6FA; /* Lavender */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Hide scrollbars, full-screen experience */
+        }
+        
+        /* ------------------ CANVAS PARTICLE SYSTEM ------------------ */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* ------------------ CONTENT & LAYOUT ------------------ */
+        #content-wrapper {
+            position: relative;
+            z-index: 10; /* Above the canvas */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Base state for all view sections (full screen overlay) */
+        .view-section {
+            position: absolute; 
+            width: 90%;
+            max-width: 1200px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            
+            /* Smoother transitions for the bloom effect */
+            opacity: 0;
+            transition: 
+                opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                filter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            filter: blur(8px) brightness(0.5);
+            transform: translateY(20px);
+            pointer-events: none; 
+        }
+        
+        .view-section.active {
+            opacity: 1;
+            filter: blur(0) brightness(1);
+            transform: translateY(0);
+            pointer-events: auto; 
+        }
+        
+        .view-section.hidden {
+            display: none; 
+        }
+
+        /* Subtle Nav Menu Styling */
+        #nav-menu {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            transform: scale(0.9);
+            opacity: 0;
+            padding: 1rem;
+            position: fixed; 
+            top: 50px;
+            z-index: 20;
+            background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent background */
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #nav-menu:hover {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .nav-link {
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: color 0.3s, transform 0.3s;
+        }
+        .nav-link:hover {
+            color: var(--pastel-pink); 
+            transform: translateY(-2px);
+        }
+        
+        /* Project Card Styling */
+        .project-card {
+            background-color: var(--pastel-purple); /* Soft background */
+            border: 1px solid #DCDCDC; /* Lighter border */
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .project-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 192, 203, 0.5); /* Pastel Pink Aura-style shadow */
+        }
+        .project-img-container {
+            height: 200px;
+            background-color: var(--pastel-blue);
+            position: relative;
+        }
+        
+        /* ------------------ MODAL STYLES (Contact) ------------------ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(247, 244, 249, 0.85); /* Light, semi-transparent overlay */
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .contact-box {
+            background: #ffffff; /* White box for contrast */
+            border: 1px solid rgba(255, 192, 203, 0.4);
+            box-shadow: 0 25px 60px rgba(255, 192, 203, 0.4);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease-in-out;
+            opacity: 0;
+            color: var(--text-dark);
+        }
+        .modal-overlay.open .contact-box {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .form-input, .form-textarea {
+            background: var(--pastel-purple);
+            border: 1px solid var(--pastel-pink);
+            color: var(--text-dark);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--pastel-pink);
+            box-shadow: 0 0 5px rgba(255, 192, 203, 0.8);
+        }
+        
+        /* Profile Image Styling */
+        .profile-icon {
+            border-radius: 50%;
+            border: 5px solid white;
+            box-shadow: 0 0 20px rgba(255, 192, 203, 0.5);
+        }
+
+        /* --- Navigation Hint Arrow --- */
+        #nav-hint {
+            position: fixed;
+            top: 10px; /* Adjust as needed */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15; /* Below menu, above content */
+            opacity: 0.4;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none; /* Do not block interaction with content */
+        }
+        #nav-menu:hover ~ #nav-hint {
+            opacity: 0; /* Hide when menu is visible */
+        }
+
+        @keyframes bounce-down {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, 10px); }
+        }
+        .animate-bounce-down {
+            animation: bounce-down 2s infinite ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+    
+    <canvas id="particleCanvas"></canvas>
+
+    <audio id="bg-music" loop src="lofiMusic1.mp3"></audio>
+    <audio id="sfx-click" src="Clicksfx.mp3"></audio>
+
+    <div id="content-wrapper">
+        
+        <nav id="nav-menu" class="text-xl space-x-8">
+            <a href="#" class="aura-link nav-link transition duration-300" data-target="home">Home</a>
+            <a href="#" class="aura-link nav-link transition duration-300" data-target="work">Projects</a>
+            <a href="#" class="aura-link nav-link transition duration-300" data-target="about">About</a>
+            <a href="#" class="aura-link nav-link transition duration-300" data-target="contact-modal-trigger">Contact</a>
+        </nav>
+        
+        <div id="nav-hint" class="animate-bounce-down">
+            <i data-lucide="chevron-down" class="w-10 h-10 text-pink-400"></i>
+        </div>
+
+        <main id="main-content-area" class="w-full h-full flex justify-center items-center">
+        
+            <div id="view-home" class="view-section active">
+                <header class="max-w-3xl mx-auto">
+                    <img id="profile-icon" class="profile-icon w-32 h-32 mx-auto mb-6 object-cover" alt="Profile Icon" />
+                    <h1 id="user-name" class="text-7xl font-light mb-2 text-gray-800">
+                        Arctic Crisp
+                    </h1>
+                    <p id="user-tagline" class="text-2xl font-light mb-8 text-pink-500">
+                        Gamer | Sleepy | Femboy
+                    </p>
+                    <div id="social-links" class="flex justify-center space-x-6 mb-12">
+                        </div>
+                    <button id="music-toggle" class="px-6 py-2 rounded-full text-sm font-semibold transition duration-300 shadow-md bg-white border border-pink-300 text-pink-500 hover:bg-pink-100">
+                        <i data-lucide="music" class="inline-block w-4 h-4 mr-2"></i> Play Music
+                    </button>
+                </header>
+            </div>
+
+            <div id="view-work" class="view-section hidden pt-32">
+                <h2 class="text-5xl font-light mb-12 text-gray-800">My Projects 💖</h2>
+                
+                <div id="projects-container" class="grid md:grid-cols-3 gap-8 w-full max-w-5xl">
+                    </div>
+            </div>
+
+            <div id="view-about" class="view-section hidden max-w-3xl">
+                <h2 class="text-5xl font-light mb-8 text-gray-800">About Me <i data-lucide="sparkles" class="inline-block text-pink-400 w-10 h-10"></i></h2>
+                <p id="user-about" class="text-xl text-gray-600 leading-relaxed mb-8">
+                    Hai! I'm Crisp, welcome to my page. I am a gay wittle femboy bottom :3
+                </p>
+                <div id="skills-container" class="text-left w-full space-y-4">
+                    </div>
+                <div class="mt-12 text-center text-sm text-gray-500">
+                    <p>Made with gayness :3</p>
+                </div>
+            </div>
+            
+        </main>
+
+    </div>
+    
+    <div id="contact-modal" class="modal-overlay">
+        <div class="contact-box w-full max-w-xl mx-4 p-8 rounded-xl relative">
+            <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-pink-500 transition duration-200 text-3xl leading-none">
+                &times;
+            </button>
+            
+            <h2 class="text-4xl font-light mb-6">Reach Out!</h2>
+            <p class="text-gray-500 mb-6">Dont be shy :3</p>
+
+            <form id="contact-form" action="https://formspree.io/f/mkgpjvdz" method="POST" class="space-y-4">
+                <div>
+                    <input type="text" name="Name" placeholder="Your Name" class="form-input w-full p-3 rounded-lg" required>
+                </div>
+                <div>
+                    <input type="email" name="Email" placeholder="Your mail" class="form-input w-full p-3 rounded-lg" required>
+                </div>
+                <div>
+                    <textarea name="Message" placeholder="Your Message" rows="5" class="form-textarea w-full p-3 rounded-lg" required></textarea>
+                </div>
+                <button type="submit" class="w-full p-3 rounded-lg bg-pink-400 text-white font-bold hover:bg-pink-300 transition duration-300 shadow-lg">
+                    Send Data
+                </button>
+                </form>
+        </div>
+    </div>
+
+
+    <script>
+        // --- USER CONFIGURATION (Your data) ---
+        const USER_CONFIG = {
+            name: "Arctic Crisp",
+            tagline: "Gamer | Sleepy | Femboy",
+            aboutMe: `Hai! I'm Crisp, welcome to my page. I am a gay wittle femboy bottom :3`,
+            profileIconUrl: "pfp1.png", // Your uploaded file
+            socialMedia: [
+                { name: "Twitter", url: "https://x.com/yourhandle", icon: "twitter", color: "text-sky-400", type: "lucide" },
+                { name: "GitHub", url: "https://github.com/youruser", icon: "github", color: "text-gray-500", type: "lucide" },
+                { name: "Discord", url: "https://discord.com/users/1374913049307254806", icon: "fab fa-discord", color: "text-indigo-400", type: "fontawesome" } 
+            ],
+            skills: {
+                "Games": ["Valorant", "Roblox", "?", "?"],
+                "Music": ["Pop", "Soft Rock", "Rap"],
+                "Hobbies": ["Playing Games", "Listening To Music", "Going Out", "Drinking"]
+            },
+            projects: [
+                {
+                    title: "title1",
+                    description: "description1",
+                    tags: ["tag1", "tag2", "tag3"],
+                    colorClass: "bg-pink-50 border-pink-200 hover:shadow-pink-300" 
+                },
+                {
+                    title: "title2",
+                    description: "description2",
+                    tags: ["tag1", "tag2", "tag3"],
+                    colorClass: "bg-blue-50 border-blue-200 hover:shadow-blue-300"
+                },
+                {
+                    title: "title3",
+                    description: "description",
+                    tags: ["tag1", "tag2", "tag3"],
+                    colorClass: "bg-purple-50 border-purple-200 hover:shadow-purple-300"
+                }
+            ],
+            activeColor: "bg-pink-400 text-white",
+            inactiveColor: "bg-white text-gray-700 hover:bg-pink-100",
+            activeShadow: "ring-pink-300"
+        };
+
+
+        // --- Particle System Logic (High-Performance Canvas) ---
+
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        const auraLinks = document.querySelectorAll('.aura-link');
+        const viewSections = document.querySelectorAll('.view-section');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const contactModal = document.getElementById('contact-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const contactForm = document.getElementById('contact-form');
+        const bgMusic = document.getElementById('bg-music');
+        const sfxClick = document.getElementById('sfx-click');
+        const musicToggleButton = document.getElementById('music-toggle');
+        const navMenu = document.getElementById('nav-menu');
+        const navHint = document.getElementById('nav-hint');
+
+
+        // Particle System Configuration
+        const PARTICLE_COUNT = 250;
+        const PARTICLE_RADIUS = 2; 
+        const MOUSE_INTERACTION_RADIUS = 75;
+        const LINK_INTERACTION_RADIUS = 50;
+        // The requested color: '255, 105, 180' (Hot Pink)
+        const PARTICLE_COLOR = '255, 105, 180'; 
+        const PARTICLE_GLOW_COLOR = '255, 220, 230'; 
+
+
+        // Global State
+        const mouse = { x: 0, y: 0 };
+        const particles = [];
+        let linkInteractionPoints = []; 
+        let isMusicPlaying = false;
+
+
+        // --- Particle Class ---
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.1; 
+                this.vy = (Math.random() - 0.5) * 0.1;
+                this.radius = PARTICLE_RADIUS;
+                this.baseAlpha = Math.random() * 0.5 + 0.3; 
+                this.alpha = this.baseAlpha;
+            }
+
+            draw(linkPower) {
+                let color = PARTICLE_COLOR; 
+                let alphaMultiplier = 1;
+                let currentRadius = this.radius;
+                
+                if (linkPower > 0.3) { 
+                    color = PARTICLE_GLOW_COLOR;
+                    alphaMultiplier = 1 + linkPower * 1.5; 
+                    currentRadius = PARTICLE_RADIUS + linkPower * 2; 
+                }
+
+                ctx.fillStyle = `rgba(${color}, ${this.alpha * alphaMultiplier})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Wall bounds (wrap around)
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+
+                this.alpha = this.baseAlpha;
+                let forceX = 0;
+                let forceY = 0;
+                let maxLinkPower = 0;
+
+                // --- 1. Mouse Interaction (Repulsion and Brightening) ---
+                const distMouse = Math.sqrt(Math.pow(this.x - mouse.x, 2) + Math.pow(this.y - mouse.y, 2));
+
+                if (distMouse < MOUSE_INTERACTION_RADIUS) {
+                    const power = 1 - (distMouse / MOUSE_INTERACTION_RADIUS);
+                    
+                    forceX -= (this.x - mouse.x) * 0.005 * power;
+                    forceY -= (this.y - mouse.y) * 0.005 * power;
+
+                    this.alpha = Math.min(1, this.baseAlpha + power * 0.7);
+                    this.radius = PARTICLE_RADIUS + power * 1.5;
+                } else {
+                    this.radius = PARTICLE_RADIUS;
+                }
+                
+                // --- 2. Link Interaction (Clustering and Intense Brightening) ---
+                
+                linkInteractionPoints.forEach(link => {
+                    if (link.isHovering) {
+                        const distLink = Math.sqrt(Math.pow(this.x - link.x, 2) + Math.pow(this.y - link.y, 2));
+                        
+                        if (distLink < LINK_INTERACTION_RADIUS) {
+                            const power = 1 - (distLink / LINK_INTERACTION_RADIUS);
+                            maxLinkPower = Math.max(maxLinkPower, power);
+
+                            forceX += (link.x - this.x) * 0.001 * power;
+                            forceY += (link.y - this.y) * 0.001 * power;
+                        }
+                    }
+                });
+
+                if (maxLinkPower > 0) {
+                    this.alpha = Math.min(1, this.baseAlpha + maxLinkPower * 0.8);
+                }
+
+                this.vx = (this.vx + forceX) * 0.99;
+                this.vy = (this.vy + forceY) * 0.99;
+
+                this.vx = Math.max(-1, Math.min(1, this.vx));
+                this.vy = Math.max(-1, Math.min(1, this.vy));
+
+                return maxLinkPower;
+            }
+        }
+
+        // --- Core Functions ---
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function initParticles() {
+            particles.length = 0; 
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function updateLinkInteractionPoints() {
+            let activeElement = document.querySelector('.view-section.active');
+            let linksInActiveView = activeElement ? activeElement.querySelectorAll('.aura-link') : [];
+            let allAuraLinks = [...document.querySelectorAll('#nav-menu .aura-link'), ...linksInActiveView];
+
+
+            linkInteractionPoints = Array.from(allAuraLinks).map(link => {
+                const rect = link.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                    isHovering: link.matches(':hover')
+                };
+            });
+        }
+
+        function drawFrame() {
+            // Clear the canvas completely for no trails
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < particles.length; i++) {
+                const linkPower = particles[i].update();
+                particles[i].draw(linkPower); 
+            }
+            
+            updateLinkInteractionPoints(); 
+
+            requestAnimationFrame(drawFrame);
+        }
+        
+        // --- Content Generation Functions ---
+
+        function populateSocialMedia() {
+            const container = document.getElementById('social-links');
+            container.innerHTML = USER_CONFIG.socialMedia.map(social => {
+                const iconHtml = social.type === 'lucide' 
+                    ? `<i data-lucide="${social.icon}" class="w-6 h-6"></i>`
+                    : `<i class="${social.icon} w-6 h-6"></i>`;
+                return `
+                    <a href="${social.url}" target="_blank" class="aura-link ${social.color} hover:text-pink-500 transition duration-300 transform hover:scale-110" aria-label="${social.name}">
+                        ${iconHtml}
+                    </a>
+                `;
+            }).join('');
+            lucide.createIcons(); 
+        }
+
+        function populateProjects() {
+            const container = document.getElementById('projects-container');
+            container.innerHTML = USER_CONFIG.projects.map(project => `
+                <div class="project-card text-gray-800 ${project.colorClass}">
+                    <div class="project-img-container flex justify-center items-center">
+                        <span class="text-3xl text-gray-700 font-bold">${project.title.slice(0, 1)}</span>
+                    </div>
+                    <div class="p-6 text-left">
+                        <h3 class="text-xl font-semibold mb-2">${project.title}</h3>
+                        <p class="text-sm text-gray-600 mb-4">${project.description}</p>
+                        <div class="flex flex-wrap gap-2">
+                            ${project.tags.map(tag => `<span class="text-xs font-medium px-2 py-0.5 rounded-full bg-white border border-pink-200 text-pink-600">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateSkills() {
+            const container = document.getElementById('skills-container');
+            container.innerHTML = Object.entries(USER_CONFIG.skills).map(([title, tags]) => `
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-pink-100">
+                    <h3 class="text-lg font-semibold mb-3 text-pink-500">${title}</h3>
+                    <div class="flex flex-wrap gap-2">
+                        ${tags.map(tag => `<span class="text-sm font-light px-3 py-1 rounded-full bg-pastel-blue border border-pastel-pink text-gray-700" style="--pastel-blue: var(--pastel-blue); --pastel-pink: var(--pastel-pink);">${tag}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStaticContent() {
+            document.getElementById('profile-icon').src = USER_CONFIG.profileIconUrl;
+            document.getElementById('user-name').textContent = USER_CONFIG.name;
+            document.getElementById('user-tagline').textContent = USER_CONFIG.tagline;
+            document.getElementById('user-about').textContent = USER_CONFIG.aboutMe;
+        }
+
+        // --- View Management Functions ---
+
+        let isTransitioning = false; // Flag to prevent multiple transitions
+
+        function switchView(targetId) {
+            if (isTransitioning) return; // Prevent new transitions while one is active
+            isTransitioning = true;
+            sfxClick.currentTime = 0;
+            sfxClick.play();
+
+            if (targetId === 'contact-modal-trigger') {
+                openContactModal();
+                isTransitioning = false;
+                return;
+            }
+            
+            let targetView = document.getElementById(`view-${targetId}`);
+            let activeView = document.querySelector('.view-section.active');
+
+            if (activeView) {
+                activeView.classList.remove('active');
+                // Use requestAnimationFrame for smoother removal
+                requestAnimationFrame(() => {
+                    activeView.classList.add('hidden');
+                });
+            }
+            
+            if (targetView) {
+                // Ensure target view is ready before activating
+                targetView.classList.remove('hidden');
+                // Use requestAnimationFrame for smoother activation
+                requestAnimationFrame(() => {
+                    targetView.classList.add('active');
+                    lucide.createIcons(); // Re-create icons for the new view
+                    setTimeout(() => { // End transition after CSS animation
+                        isTransitioning = false;
+                    }, 800); // Match CSS transition duration
+                });
+            } else {
+                isTransitioning = false;
+            }
+        }
+
+        function openContactModal() {
+            contactModal.classList.add('open');
+        }
+
+        function closeContactModal() {
+            contactModal.classList.remove('open');
+        }
+
+        function toggleMusic() {
+            if (isMusicPlaying) {
+                bgMusic.pause();
+                musicToggleButton.innerHTML = '<i data-lucide="music" class="inline-block w-4 h-4 mr-2"></i> Play Music';
+            } else {
+                bgMusic.play().catch(error => {
+                    console.error("Autoplay prevented:", error);
+                    alert("Music autoplay was blocked by the browser. Please click again to play.");
+                });
+                musicToggleButton.innerHTML = '<i data-lucide="volume-2" class="inline-block w-4 h-4 mr-2"></i> Pause Music';
+            }
+            isMusicPlaying = !isMusicPlaying;
+            lucide.createIcons(); 
+        }
+
+        // --- Event Handlers & Initialization ---
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = e.currentTarget.dataset.target;
+                
+                closeContactModal();
+                switchView(target);
+            });
+        });
+
+        musicToggleButton.addEventListener('click', toggleMusic);
+        
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', () => {
+                sfxClick.currentTime = 0;
+                sfxClick.play();
+                closeContactModal();
+            });
+        }
+        contactModal.addEventListener('click', (e) => {
+            if (e.target === contactModal) {
+                sfxClick.currentTime = 0;
+                sfxClick.play();
+                closeContactModal();
+            }
+        });
+        
+        // --- Formspree handles the submission, so we remove the old JS handler here.
+        // If you were to use a JS-based form submission again, this is where that logic would go.
+
+        // Initial setup
+        window.onload = () => {
+            resizeCanvas();
+            initParticles();
+            drawFrame(); 
+            updateStaticContent();
+            populateSocialMedia();
+            populateProjects();
+            populateSkills();
+            lucide.createIcons(); 
+        };
+
+    </script>
+</body>
+</html>
